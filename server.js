@@ -1,10 +1,41 @@
 const express = require('express');
-      })
+
+const app = express();
+app.use(express.json());
+
+const PORT = process.env.PORT || 3000;
+const APP_PASSWORD = process.env.APP_PASSWORD || 'changeme';
+
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER;
+const GHL_API_KEY = process.env.GHL_API_KEY;
+
+function requireAuth(req, res, next) {
+  const auth = req.headers['authorization'] || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (token !== APP_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
+async function addGhlNote(contactId, note) {
+  if (!contactId || !GHL_API_KEY) return;
+  try {
+    await fetch(`https://rest.gohighlevel.com/v1/contacts/${contactId}/notes/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GHL_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ body: note }),
     });
   } catch (e) {
     console.error('GHL note error:', e.message);
   }
 }
+
 
 app.get('/', (req, res) => {
   res.type('html').send(`
@@ -125,5 +156,52 @@ app.get('/', (req, res) => {
   `);
 });
 
+
 app.post('/api/dial', requireAuth, async (req, res) => {
+  const { numbers, leadName, contactId, whisper } = req.body;
+
+  if (!Array.isArray(numbers) || numbers.length === 0) {
+    return res.status(400).json({ error: 'numbers array is required' });
+  }
+  if (numbers.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 numbers allowed' });
+  }
+
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER) {
+    return res.status(500).json({ error: 'Twilio credentials not configured' });
+  }
+
+  const twilio = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+
+  const whisperText = whisper || (leadName ? `Connecting you with ${leadName}` : 'Connecting your call');
+
+  const results = await Promise.allSettled(
+    numbers.map((to) =>
+      twilio.calls.create({
+        to,
+        from: TWILIO_FROM_NUMBER,
+        twiml: `<Response><Say>${whisperText}</Say><Pause length="60"/></Response>`,
+      })
+    )
+  );
+
+  const calls = results.map((r, i) => ({
+    number: numbers[i],
+    status: r.status === 'fulfilled' ? r.value.status : 'failed',
+    sid: r.status === 'fulfilled' ? r.value.sid : null,
+    error: r.status === 'rejected' ? r.reason.message : null,
+  }));
+
+  if (contactId) {
+    const summary = calls
+      .map((c) => `${c.number}: ${c.status}${c.error ? ` (${c.error})` : ''}`)
+      .join('\n');
+    await addGhlNote(contactId, `Parallel dial initiated for ${leadName || 'lead'}:\n${summary}`);
+  }
+
+  res.json({ calls });
+});
+
+app.listen(PORT, () => {
+  console.log(`Parallel dialer listening on port ${PORT}`);
 });
