@@ -1,0 +1,88 @@
+name: AppBlocker
+options:
+  bundleIdPrefix: com.jcmarketing
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  AppBlocker:
+    type: application
+    platform: iOS
+    sources:
+      - path: AppBlocker
+      - path: Shared
+    entitlements:
+      path: AppBlocker/AppBlocker.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.jcmarketing.appblocker
+    info:
+      path: AppBlocker/Info.plist
+      properties:
+        CFBundleDisplayName: App Blocker
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jcmarketing.appblocker
+    dependencies:
+      - target: MonitorExtension
+        embed: true
+      - target: ShieldConfigExtension
+        embed: true
+
+  MonitorExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MonitorExtension
+      - path: Shared
+    entitlements:
+      path: MonitorExtension/MonitorExtension.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.jcmarketing.appblocker
+    info:
+      path: MonitorExtension/Info.plist
+      properties:
+        CFBundleDisplayName: MonitorExtension
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.deviceactivity.monitor-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).MonitorExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jcmarketing.appblocker.monitor
+
+  ShieldConfigExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShieldConfigExtension
+      - path: Shared
+    entitlements:
+      path: ShieldConfigExtension/ShieldConfigExtension.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.jcmarketing.appblocker
+    info:
+      path: ShieldConfigExtension/Info.plist
+      properties:
+        CFBundleDisplayName: ShieldConfigExtension
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.ManagedSettingsUI.shield-configuration-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShieldConfigExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jcmarketing.appblocker.shieldconfig
