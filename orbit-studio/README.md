@@ -76,9 +76,17 @@ npm test
 Spins the server up in mock mode on a random port and exercises config,
 validation, image generation, upload, video generation and deletion.
 
-## Deploy
+## Deploy to Railway
 
-Works anywhere Node 18+ runs. On Railway, point the service at the
-`orbit-studio` directory, set the variables from `.env.example`, and set
-`BASE_URL` to the generated domain. Mount a volume at `orbit-studio/data` if you
-want jobs and uploads to survive redeploys.
+The service config lives in `railway.json` (Nixpacks build, `npm start`,
+health check on `/api/health`).
+
+1. In Railway, create a new service from this GitHub repo.
+2. Service settings → Source → set **Root Directory** to `orbit-studio`.
+3. Variables: add `HIGGSFIELD_API_KEY` and `HIGGSFIELD_API_SECRET` (leave them
+   out to run in mock mode). Railway sets `PORT` itself.
+4. Settings → Networking → Generate Domain, then add a `BASE_URL` variable
+   with that `https://...` domain so live-mode video jobs can fetch uploads.
+5. Optional: add a Volume mounted at `/app/data` so jobs and uploads survive
+   redeploys, and set `DATA_DIR=/app/data`.
+6. Deploy. The health check turns green once the server answers.
