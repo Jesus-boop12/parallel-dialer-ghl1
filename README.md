@@ -17,3 +17,8 @@
 3. Add the environment variables from `.env.example`
 4. Replace `BASE_URL` with your real Railway URL
 5. Redeploy
+
+## Orbit Studio
+
+`orbit-studio/` is a separate app: a Higgsfield-style AI image and camera-motion
+video studio. See [orbit-studio/README.md](orbit-studio/README.md) to run it.
